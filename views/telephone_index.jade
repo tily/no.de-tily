@@ -1,0 +1,21 @@
+!!! 5
+html(lang="en")
+	head
+		title= "Telephone"
+		link(href='/stylesheets/style.css', rel='stylesheet')
+		script(src='/jquery-1.6.1.min.js')
+		script
+			$(function() {
+				$('#form').submit(function(e) {
+					console.log($('#input').val())
+					if($('#input') == '') return
+					document.location = '/telephone/' + $('#input').val()
+					return false
+				})
+			})
+	body
+		#chat
+			#nickname
+				form.wrap#form
+					p Please type in room name and press enter.
+					input#input

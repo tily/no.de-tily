@@ -1,0 +1,134 @@
+!!! 5
+html(lang="en")
+	head
+		title= "Telephone: " + title
+		link(href='/stylesheets/style.css', rel='stylesheet')
+		script(src='http://code.jquery.com/jquery-1.6.1.min.js')
+		script(src='/socket.io/socket.io.js')
+		script(src='/mic.js')
+		script(src='/firefox_audio_player.js')
+		script(src='/chrome_audio_player.js')
+		script(src='/player.js')
+		script(type='text/javascript')
+			var socket = io.connect()
+			//var audios = {}
+			var players = {}
+			var buffers = {}
+			var matches = location.href.match(/\\/([a-zA-Z0-9_]+)$/)
+			var room = matches[1]
+			console.log("emitting: room: ", room)
+			socket.emit('room', room)
+			socket.on('announcement', function(msg) {
+				$('#lines').append($('<p>').append($('<em>').text(msg)))
+			})
+			socket.on('connect', function() {
+				$('#chat').addClass('connected')
+			})
+			socket.on('nicknames', function(nicknames) {
+				$('#nicknames').empty().append($('<span>' + document.title + ', Online: </span>'))
+				for (var i in nicknames) {
+					$('#nicknames').append($('<b>').text(nicknames[i]).attr('id', nicknames[i]))
+					if(!buffers[i]) buffers[i] = []
+					if(!players[i]) {
+						players[i] = pico.getplayer({samplerate:44100, channel: 1})
+						console.log("start playing")
+						players[i].play({ next: function() {
+							return buffers[i].shift() }})
+					}
+				}
+			})
+			socket.on('user message', message)
+			socket.on('sample data', function(from, msg) {
+				if(buffers[from]) { buffers[from].push(msg) }
+				//if(!audios[from]) {
+				//	var ua = navigator.userAgent.toLowerCase()
+				//	if(ua.match(/firefox/)) {
+				//		console.log("from" + from)
+				//		var audio = new Audio()
+				//		document.body.appendChild(audio)
+				//		audios[from] = new AudioWriter(audio)
+				//		audios[from].startPlaying()
+				//		audio.addEventListener('canplay', function() {
+				//			console.log("canplay")
+				//		}, false)
+				//	} else if (ua.match(/chrome/)) {
+				//		audios[from] = new ChromeAudioPlayer()
+				//		audios[from].play()
+				//	}
+				//}
+				//audios[from].write(msg)
+			})
+			socket.on('microphone', function(from, msg) {
+				message(from, 'mic:' + msg)
+				var color = msg == 'on' ? '#ff0000' : '#ffffff'
+				$('#' + from).css('color', color)
+			})
+			socket.on('reconnect', function() {
+				$('#lines').remove()
+				message('System', 'Reconnected to the server')
+			})
+			socket.on('reconnecting', function() {
+				message('System', 'Attempting to re-connect to the server')
+			})
+			socket.on('error', function(e) {
+				message('System', e ? e : 'A unknown error occurred')
+			})
+			function message(from, msg) {
+				$('#lines').append($('<p>').append($('<b>').text(from), msg))
+			}
+			$(function() {
+				$('#set-nickname').submit(function (ev) {
+					socket.emit('nickname', $('#nick').val(), function (set) {
+						if (!set) {
+							clear()
+							return $('#chat').addClass('nickname-set')
+						}
+						$('#nickname-err').css('visibility', 'visible')
+					})
+					Mic.embed('/mic.swf')
+					Mic.ondata = function(data) {
+						if($('#mute').attr('first') == 'true') {
+							console.log("emitting: microphone: on")
+							socket.emit('microphone', 'on')
+							$('#mute').removeClass('on').addClass('off').attr('first', 'false')
+						}
+						console.log("emitting: sample data")
+						socket.emit('sample data', data)
+					}
+					return false
+				})
+				$('button#send').click(function() {
+					message('me', $('#message').val())
+					socket.emit('user message', $('#message').val())
+					clear()
+					$('#lines').get(0).scrollTop = 10000000
+					return false
+				})
+				$('button#mute').click(function() {
+					var now = $(this).attr('class')
+					var to = now == 'on' ? 'off' : 'on'
+					socket.emit('microphone', now)
+					$('button#mute').removeClass(now).addClass(to)
+					Mic.mute = to == 'on'
+					return false
+				})
+				function clear() {
+					$('#message').val('').focus()
+				}
+			})
+	body
+		#chat
+			#nickname
+				form.wrap#set-nickname
+					p Please type in your nickname and press enter.
+					input#nick
+					p#nickname-err Nickname already in use
+			#connecting
+				.wrap Connecting to socket.io server
+			#messages
+				#nicknames
+				#lines
+			form#send-message
+				input#message
+				button#send Send
+				button#mute.on(first='true') Mute

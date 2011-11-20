@@ -1,0 +1,66 @@
+<html>
+<head>
+	<script type="text/javascript" src="mic.js"></script>
+	<script type="text/javascript" src="wav.js"></script>
+	<script>
+		var wav = null
+		var audio = null
+		var dl = null
+		var isRecording = false
+		var isPlaying = false
+
+		window.addEventListener("load", function() {
+			Mic.embed("mic.swf")
+			wav = new Wav()
+			dl = document.querySelector("#dl")
+		}, false)
+
+		function record() {
+			if(isPlaying) return
+			if(isRecording) {
+				Mic.ondata = null
+				var data = wav.getData()
+				dl.href = "data:audio/wav;base64," + base64encode(data)
+			} else {
+				Mic.ondata = function(data) {
+					wav.append(data)
+				}
+			}
+			isRecording = !isRecording
+		}
+		function clear() {
+			if(isRecording || isPlaying) return
+			wav.clear()
+		}
+		function play() {
+			if(isRecording || dl.href == "") return
+			if(isPlaying) {
+				audio.pause()
+			} else {
+				audio = document.createElement("audio")
+				audio.src = dl.href
+				audio.play()
+				audio.addEventListener("ended", function() {
+					isPlaying = false
+				}, false)
+			}
+			isPlaying = !isPlaying
+		}
+		// http://hitode909.appspot.com/amen/wavfile.js
+		function base64encode(data) {
+			return btoa(data.replace(/[\u0100-\uffff]/g, function(c) {
+				return String.fromCharCode(c.charCodeAt(0) & 0xff)
+			}))
+		}
+	</script>
+</head>
+<body>
+	<div>
+		<button onclick="clear()">CLEAR</button>
+		<button onclick="record()">REC</button>
+		<button onclick="play()">PLAY</button>
+		<span>0.00</span>
+		<a id="dl" href="" target="_blank">DOWNLOAD</a>
+	</div>
+</body>
+</html>

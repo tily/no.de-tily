@@ -1,0 +1,34 @@
+<html>
+<head>
+	<script type="text/javascript" src="mic.js"></script>
+	<script type="text/javascript" src="http://hitode909.appspot.com/amen/plotter.js" charset="UTF-8"></script>
+        <script>
+		var plotter = null
+		var canvas = null
+                window.onload = function() {
+			canvas = document.querySelector("canvas")
+			plotter = new Plotter(canvas, 32767)
+			Microphone.embed("mic.swf")
+			Microphone.ondata = function(arr) {
+				canvas.width = window.innerWidth
+				canvas.height = window.innerHeight
+				plotter.clear()
+				plotter.plot(arr)
+			}
+                }
+        </script>
+	<style>
+		canvas {
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			width: 100%;
+			height: 100%;
+			z-index: 10;
+		}
+	</style>
+</head>
+<body>
+	<canvas></canvas>
+</body>
+</html>
